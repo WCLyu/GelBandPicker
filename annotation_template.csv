@@ -1,0 +1,4 @@
+lane_index,include,lane_label,x_center,top_label,bottom_label,note
+1,FALSE,marker,,,,
+2,TRUE,001,,001,WT,
+3,TRUE,002,,002,M456V,
