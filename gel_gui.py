@@ -638,6 +638,7 @@ class GelGuiApp:
         self.panning = False
         self.undo_stack: list[dict[str, object]] = []
         self.redo_stack: list[dict[str, object]] = []
+        self.band_count_refresh_job: str | None = None
 
         self._build_ui()
         self._refresh_band_buttons()
@@ -857,6 +858,7 @@ class GelGuiApp:
         ttk.Label(parent, text="Bands").pack(side=tk.LEFT)
         entry = ttk.Entry(parent, textvariable=self.band_count_var, width=4)
         entry.pack(side=tk.LEFT, padx=(4, 12))
+        entry.bind("<KeyRelease>", lambda _event: self._schedule_band_count_refresh())
         entry.bind("<Return>", lambda _event: self._on_band_count_changed())
         entry.bind("<FocusOut>", lambda _event: self._on_band_count_changed())
 
@@ -923,7 +925,34 @@ class GelGuiApp:
             self.outdir_var.set(path)
 
     def _on_band_count_changed(self) -> None:
+        if self.band_count_refresh_job is not None:
+            try:
+                self.root.after_cancel(self.band_count_refresh_job)
+            except tk.TclError:
+                pass
+            self.band_count_refresh_job = None
         self.band_count_var.set(str(self._band_count()))
+        self._refresh_band_buttons()
+        self.redraw()
+
+    def _schedule_band_count_refresh(self) -> None:
+        if self.band_count_refresh_job is not None:
+            try:
+                self.root.after_cancel(self.band_count_refresh_job)
+            except tk.TclError:
+                pass
+        self.band_count_refresh_job = self.root.after(120, self._refresh_band_buttons_live)
+
+    def _refresh_band_buttons_live(self) -> None:
+        self.band_count_refresh_job = None
+        raw = str(self.band_count_var.get()).strip()
+        if not raw:
+            return
+        try:
+            if int(raw) < 1:
+                return
+        except (TypeError, ValueError, tk.TclError):
+            return
         self._refresh_band_buttons()
         self.redraw()
 
